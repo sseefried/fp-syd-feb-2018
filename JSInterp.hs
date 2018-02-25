@@ -10,7 +10,7 @@ import Text.Read (readMaybe)
 import Debug.Trace
 
 data Type = TUndefined
-	      | TNull
+          | TNull
           | TBoolean
           | TNumber
 --          | TSymbol
@@ -41,6 +41,7 @@ type Method = (String, MethodFun)
 
 data Exp = Plus Exp Exp
          | Value Value
+         | UnaryPlus Exp
          | MethodCall Exp [Exp] String
          deriving (Show)
 
@@ -96,6 +97,7 @@ eval (Plus e1 e2) =
       _ -> let lnum = ecmaToNumber(lprim)
                rnum = ecmaToNumber(rprim)
            in plusNumber lnum rnum
+eval (UnaryPlus e) = VNumber $ ecmaToNumber (eval e)
 
 lookupMethod :: String -> Object -> Maybe MethodFun
 lookupMethod nm o =
@@ -151,7 +153,7 @@ ordinaryToPrimitive o hint =
             Just f  ->
               case f o [] of
                 VObject o -> callFirstFoundMethod ms
-                -- ^ result was an object. Keep going
+                -- ^ result was an object (not primitive). Keep going
                 result -> result
             Nothing -> callFirstFoundMethod ms
 
@@ -173,9 +175,10 @@ ecmaToNumber = \case
   VBoolean b -> if b then 1 else 0
   VNumber n  -> n
   VString s  ->
-    case readMaybe s of
-      Just n -> n
-      Nothing -> 0
+    if s == "" then 0
+    else case readMaybe s of
+           Just n  -> n
+           Nothing -> nan
   o@(VObject _)  -> ecmaToNumber $ ecmaToPrimitive (Just "number") o
 
 -- ToString
@@ -244,9 +247,20 @@ emptyArrayExp = Value $ VObject emptyArray
 
 emptyObjectExp = Value $ VObject $ Object []
 
--- [].toString()
-wat1 = eval (Plus emptyObjectExp emptyObjectExp)
-wat2 = eval (Plus emptyArrayExp emptyArrayExp)
-wat3 = eval (Plus emptyArrayExp emptyObjectExp)
-wat4 = eval (Plus emptyObjectExp emptyArrayExp)
+-- [] + [] => ""
+wat1 = eval $ Plus emptyArrayExp emptyArrayExp
+-- [] + {}  => 0
+wat2 = eval $ Plus emptyArrayExp emptyObjectExp
+
+-- {} + [] => 0
+wat3 = eval $ UnaryPlus emptyArrayExp
+
+-- {} + {} => NaN
+wat4 = eval $ UnaryPlus emptyObjectExp
+
+-- ({} + {}) => "[object Object][object Object]"
+wat3' = eval $ Plus emptyObjectExp emptyObjectExp
+
+-- ({} + []) =>
+wat4' = eval $ Plus emptyObjectExp emptyArrayExp
 
