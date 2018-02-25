@@ -1,6 +1,6 @@
 # FP Syd February 2018
 
-# Purpose 
+# Purpose
 
 Here is a stream of consciousness about what I am trying to achieve with this
 talk.  I have long heard from people that they don't understand languages like
@@ -49,7 +49,7 @@ semantics for a fragment of the JavaScript language.
 
 - Whether you know it or not you are modelling the language in your
   head. Why not be explicit about it?
-- Wouldn't reducing the language constructs to a minimal set of powerful 
+- Wouldn't reducing the language constructs to a minimal set of powerful
   features make sense? Less to remember. Simpler to reason bout.
 
 # DONE
@@ -71,7 +71,7 @@ semantics for a fragment of the JavaScript language.
 # Wat talk
 
     > [] + []
-    
+
 It's the empty string
 
     > [] + {}
@@ -94,7 +94,7 @@ It's the empty string
     > wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1wat1
 
     > Array(16).join("wat" - 1) + " Batman!"
-    NaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaN Batman! 
+    NaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaN Batman!
 
 Less silly
 
@@ -109,35 +109,35 @@ Less silly
 > AdditiveExpression : AdditiveExpression + MultiplicativeExpression
 > 1. Let lref be the result of evaluating AdditiveExpression.
 > 2. Let lval be ? GetValue(lref).
-> 3. Let rref be the result of evaluating MultiplicativeExpression. 
+> 3. Let rref be the result of evaluating MultiplicativeExpression.
 > 4. Let rval be ? GetValue(rref).
 > 5. Let lprim be ? ToPrimitive(lval).
 > 6. Let rprim be ? ToPrimitive(rval).
 > 7. If Type(lprim) is String or Type(rprim) is String, then
->    a. Let lstr be ? ToString(lprim). 
+>    a. Let lstr be ? ToString(lprim).
 >    b. Let rstr be ? ToString(rprim).
->    c. Return the String that is the result of concatenating lstr and rstr. 
+>    c. Return the String that is the result of concatenating lstr and rstr.
 > 8. Let lnum be ? ToNumber(lprim).
 > 9. Let rnum be ? ToNumber(rprim).
 > 10. Return the result of applying the addition operation to lnum and rnum. See the Note below 12.8.5.
- 
+
 > NOTE 1: No hint is provided in the calls to ToPrimitive in steps 5 and 6. All
 > standard objects except Date objects handle the absence of a hint as if the hint
 > Number were given; Date objects handle the absence of a hint as if the hint
 > String were given. Exotic objects may handle the absence of a hint in some other
 > manner.
 
-> NOTE 2: Step 7 differs from step 3 of the Abstract Relational Comparison 
+> NOTE 2: Step 7 differs from step 3 of the Abstract Relational Comparison
 > algorithm, by using the logical‐or operation instead of the logical‐and operation.
 
 
-Why is `[] + []` the empty string? 
+Why is `[] + []` the empty string?
 
 I can't be sure but I think it's because `ToPrimitive([])` yields `""`
 But when I read through `ToPrimitive` that is not what I discover.
 I had a look at `GetValue`. I don't think it can be that either.
 
-There is no primitive `Array` type! `Array` is actually an `Object`. 
+There is no primitive `Array` type! `Array` is actually an `Object`.
 https://stackoverflow.com/questions/31709156/does-javascript-have-exotic-objects
 
 Okay, I've worked out the full process.
@@ -148,16 +148,16 @@ Okay, I've worked out the full process.
 - @12.8.3-4 `rval` is `GetValue([])` which returns `[]`
 - @12.8.3-5 `lprim` is bound to `ToPrimitive(lval)`
     - @7.1.1-1 Assert that it is ECMAScript language value is true.
-    - @7.1.1-2 `Type([])` is `Object` and 
+    - @7.1.1-2 `Type([])` is `Object` and
       a) hint is set to `default`
       b) n/a
       c) n/a
-      d) `exoticToPrim` is bound to `GetMethod(input, @@toPrimitive)` which is 
+      d) `exoticToPrim` is bound to `GetMethod(input, @@toPrimitive)` which is
          `undefined` in this case.
       e) n/a
       f) hint was `default` so now it is set to `number`
       g) `OrdinaryToPrimitive([], "number")` is called
-        - @7.1.1.1-1 Assertion that it is `Object` is true        
+        - @7.1.1.1-1 Assertion that it is `Object` is true
         - @7.1.1.1-2 Assertion that hint is "string" or "number" is true
         - @7.1.1.1-3 n/a since `hint` is `"number"`
         - @7.1.1.1-4 `methodNames` is set to << "valueOf", "toString" >>

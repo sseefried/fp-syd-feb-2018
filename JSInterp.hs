@@ -2,10 +2,12 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module JSInterp where
+module Main where
 
 import Data.Char (isNumber)
 import Data.List (intercalate, sort)
+import Text.Read (readMaybe)
+import Debug.Trace
 
 data Type = TUndefined
 	      | TNull
@@ -74,19 +76,19 @@ eval (MethodCall e es nm) =
   case (eval e, map eval es) of
     (VObject o, vs) ->
       case lookupMethod nm o of
-        Just f -> f o vs
+        Just f  -> f o vs
         Nothing -> error ("could not find method " ++ nm)
     _        -> VUndefined -- can only method call on objects
 eval (Plus e1 e2) =
-  let lref = eval e1
-      lval = lref -- since we don't have references
-      rref = eval e2
-      rval = rref -- since we don't have references
-      lprim = toPrimitive lval
-      rprim = toPrimitive rval
+  let lref  = eval e1
+      lval  = lref -- since we don't have references
+      rref  = eval e2
+      rval  = rref -- since we don't have references
+      lprim = ecmaToPrimitive Nothing lval
+      rprim = ecmaToPrimitive Nothing rval
   in
     case True of
-      _ | typeOf(lprim) == TString || typeOf(rprim) == TString
+      _ | typeOf lprim == TString || typeOf rprim == TString
         -> let lstr = ecmaToString lprim
                rstr = ecmaToString rprim
            in VString (lstr ++ rstr)
@@ -98,18 +100,61 @@ eval (Plus e1 e2) =
 lookupMethod :: String -> Object -> Maybe MethodFun
 lookupMethod nm o =
   case o of
-    Object props -> Nothing -- FIXME: Built-in functions required!
+    Object _ -> lookup nm objectMethods
     Class _ methods parent ->
       case lookup nm methods of
         Just method -> Just method
         Nothing     -> lookupMethod nm parent
 
 
+-- default methods of Object
+objectMethods :: [(String, MethodFun)]
+objectMethods = [ ("toString", \_ _ -> VString "[object Object]")
+                , ("valueOf", \o _ -> VObject o) ]
 
-toPrimitive :: Value -> Value
-toPrimitive = \case
-  VObject obj -> undefined
+type Hint = String
+
+ecmaToPrimitive :: Maybe Hint -> Value -> Value
+ecmaToPrimitive mbType = \case
+  VObject obj ->
+    let hint = case mbType of
+                 Nothing -> "default"
+                 Just h  -> h
+        mbExoticToPrim = lookupMethod "toPrimitive" obj
+    in case mbExoticToPrim of
+         Just f ->
+           let result = f obj [VString hint]
+           in case typeOf result of
+                TObject -> error "TypeError"
+                _       -> result
+         Nothing ->
+           let hint' = case hint of
+                         "default" -> "number"
+                         h    -> h
+           in ordinaryToPrimitive obj hint'
   prim        -> prim
+
+-- can only be called on objects
+ordinaryToPrimitive :: Object -> Hint -> Value
+ordinaryToPrimitive o hint =
+  let methodNames =
+       case hint of
+         "string" -> [ "toString", "valueOf"  ]
+         "number" -> [ "valueOf",  "toString" ]
+         _ -> error $ "hint should be 'number' or 'string' but was \"" ++
+                      hint ++ "\""
+  in callFirstFoundMethod methodNames
+  where
+    callFirstFoundMethod [] = error "TypeError"
+    callFirstFoundMethod (m:ms) =
+          case lookupMethod m o of
+            Just f  ->
+              case f o [] of
+                VObject o -> callFirstFoundMethod ms
+                -- ^ result was an object. Keep going
+                result -> result
+            Nothing -> callFirstFoundMethod ms
+
 
 typeOf :: Value -> Type
 typeOf = \case
@@ -122,11 +167,27 @@ typeOf = \case
 
 -- ToNumber
 ecmaToNumber :: Value -> Double
-ecmaToNumber = error "toNumber undefined"
+ecmaToNumber = \case
+  VUndefined -> nan
+  VNull      -> 0
+  VBoolean b -> if b then 1 else 0
+  VNumber n  -> n
+  VString s  ->
+    case readMaybe s of
+      Just n -> n
+      Nothing -> 0
+  o@(VObject _)  -> ecmaToNumber $ ecmaToPrimitive (Just "number") o
 
 -- ToString
 ecmaToString :: Value -> String
-ecmaToString = error "toString undefined"
+ecmaToString = \case
+  VUndefined -> "undefined"
+  VNull      -> "null"
+  VBoolean b -> if b then "true" else "false"
+  VNumber n  -> show n
+  VString s  -> s
+  o@(VObject _)  -> ecmaToString $ ecmaToPrimitive (Just "string") o
+
 
 -- built-in addition. Only works on numbers
 plusNumber :: Double -> Double -> Value
@@ -178,4 +239,14 @@ isNumberString = all isNumber
 --------------------------------------------------------------------------------
 -- Tests
 
-t1 = eval (MethodCall (Value (VObject emptyArray)) [] "toString")
+emptyArrayExp :: Exp
+emptyArrayExp = Value $ VObject emptyArray
+
+emptyObjectExp = Value $ VObject $ Object []
+
+-- [].toString()
+wat1 = eval (Plus emptyObjectExp emptyObjectExp)
+wat2 = eval (Plus emptyArrayExp emptyArrayExp)
+wat3 = eval (Plus emptyArrayExp emptyObjectExp)
+wat4 = eval (Plus emptyObjectExp emptyArrayExp)
+
