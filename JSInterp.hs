@@ -8,7 +8,7 @@ import Data.Char (isNumber)
 import Data.List (intercalate, sort)
 
 data Type = TUndefined
-	      | TNull
+          | TNull
           | TBoolean
           | TNumber
 --          | TSymbol
