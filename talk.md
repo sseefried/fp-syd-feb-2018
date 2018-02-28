@@ -1,9 +1,14 @@
 # Intro
 
-Hi everyone and thanks for waiting around to see this talk.
+Hi all, thanks for coming along. This is the first time I'm giving this talk
+but because I believe so strongly in what I'm about to say I hope I can make it
+much better.
 
-Ahead of time I'm just going to let you know that I'll be pronouncing
-W.A.T as "wat", just the same as Gary Bernhardt does.
+Let's start with something fun. I'm going to assume the role of Gary Bernhardt
+and give the infamous JavaScript WAT talk.
+
+And, just to let you know I'll am going to pronounce it "wat", just the same
+as Gary Bernhardt does.
 
 # Wat talk
 
@@ -165,14 +170,19 @@ So in fact, you get something much closer to what you've already seen.
 
 Nevertheless, as we'll soon see JavaScript's semantics really are a mess.
 
-
-
-
 # ECMAScript standard
 
+# Simple semantics does not equal simple to reason about
 
+I want to tell you about an important caveat to the message of this talk.
 
+I've shown you a language with a complex semantics and how terrible that is,
+but even in a language with simple semantics, it could be hard to reason about
+programs _written in that language_.
 
+For instance you could have a simple semantics for an imperative language
+which has state, mutation and references. It could still be hard to reason
+about your _programs_ even though it was easy to reason about your _language_.
 
 # END NOTE
 
@@ -181,4 +191,5 @@ convincing case for but I'll wager that's because you've self-selected
 to be here at FP Syd tonight, and you're already partial to these ideas.
 
 My end-goal is to give this talk at a more mainstream event and have it
-convince a few of the skeptics in the audience. To that
+convince a few of the skeptics in the audience. If you can give me any ideas
+please let me know.
