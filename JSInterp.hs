@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Main where
+module JSInterp where
 
 import Data.Char (isNumber)
 import Data.List (intercalate, sort)
